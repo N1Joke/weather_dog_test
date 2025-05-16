@@ -1,4 +1,6 @@
-﻿using Assets._Project.Scripts.Network;
+﻿using AppConstants;
+using Assets._Project.Scripts.DogsScreen.Factory;
+using Assets._Project.Scripts.Network;
 using Assets._Project.Scripts.Network.Weather;
 using Core;
 using Cysharp.Threading.Tasks;
@@ -6,6 +8,7 @@ using DG.Tweening;
 using System;
 using System.Text;
 using System.Threading;
+using Tools.Extensions;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -18,9 +21,9 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
             public WeatherScreenView view;
             public QueryManager queryManager;
             public IWeatherService service;
+            public ReactiveEvent<string> onScreenChange;            
         }
-
-        private const string WeatherTag = "Weather";
+        
         private const int DelayRefresh = 5;
         private readonly Ctx _ctx;
         private readonly WeatherScreenModel _model;
@@ -37,28 +40,92 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
             _ctx = ctx;
             _model = new();
 
-            //StartPolling();
+            Subscribe();
+        }
+
+        private void Subscribe()
+        {
+            _ctx.onScreenChange.Subscribe(ChangeScreen);
+        }
+
+        private void ChangeScreen(string tag)
+        {
+            if (tag == Constants.WeatherTag)
+                Activate();
+            else
+                Deactivate();
+        }
+
+        private void Activate()
+        {
+            _ctx.view.gameObject.SetActive(true);
+            StartPolling();
+        }
+
+        private void Deactivate()
+        {
+            _ctx.view.gameObject.SetActive(false);
+            StopPolling();
         }
 
         private void StartPolling()
         {
             _pollingCts = new CancellationTokenSource();
+            _iconCts = new CancellationTokenSource();
             PollWeather(_pollingCts.Token).Forget();
         }
 
-        private async UniTaskVoid PollWeather(CancellationToken ct)
+        private void StopPolling()
         {
-            while (!ct.IsCancellationRequested)
+            _pollingCts?.Cancel();
+            _pollingCts?.Dispose();
+            _pollingCts = null;
+
+            _iconCts?.Cancel();
+            _iconCts?.Dispose();
+            _iconCts = null;
+
+            _ctx.queryManager.RemoveByTag(Constants.WeatherTag);
+        }
+
+        private async UniTaskVoid PollWeather(CancellationToken outerToken)
+        {
+            while (!outerToken.IsCancellationRequested)
             {
-                _ctx.queryManager.Enqueue(WeatherTag, async token =>
+                _ctx.queryManager.Enqueue(Constants.WeatherTag, async queryToken =>
                 {
-                    ShowLoading();
-                    var forecast = await _ctx.service.GetForecastAsync(token);
-                    ShowForecast(forecast);
-                    HideLoading();
+                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(queryToken, outerToken);
+                    var linkedToken = linkedCts.Token;
+
+                    try
+                    {
+                        ShowLoading();
+                        var forecast = await _ctx.service.GetForecastAsync(linkedToken);
+                        ShowForecast(forecast);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.Log("Weather request canceled");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"Weather request error: {ex}");
+                    }
+                    finally
+                    {
+                        HideLoading();
+                    }
                 });
 
-                await UniTask.Delay(TimeSpan.FromSeconds(DelayRefresh), cancellationToken: ct);
+                try
+                {
+                    await UniTask.Delay(TimeSpan.FromSeconds(DelayRefresh), cancellationToken: outerToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    Debug.Log("Weather poll cycle canceled");
+                    break; 
+                }
             }
         }
 
@@ -86,7 +153,7 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
             _sb.Append(forecast.TemperatureUnit);
             _ctx.view.lable.text = _sb.ToString();
 
-            LoadIcon(forecast.IconUrl, _iconCts.Token).Forget();            
+            LoadIcon(forecast.IconUrl, _iconCts.Token).Forget();
         }
 
         private async UniTaskVoid LoadIcon(string url, CancellationToken ct)
@@ -120,19 +187,12 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
             }
             catch (OperationCanceledException)
             {
-                
+                Debug.Log("Request Icon load canceled");
             }
             catch (Exception ex)
             {
                 Debug.LogError($"Icon load error: {ex}");
             }
-        }
-
-        private void StopPolling()
-        {
-            _pollingCts?.Cancel();
-            _ctx.queryManager.CancelCurrent();
-            _ctx.queryManager.RemoveByTag(WeatherTag);
         }
 
         protected override void OnDispose()
@@ -141,7 +201,7 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
             _iconCts?.Dispose();
             _pollingCts?.Cancel();
             _pollingCts?.Dispose();
-            _ctx.queryManager.RemoveByTag(WeatherTag);
+            _ctx.queryManager.RemoveByTag(Constants.WeatherTag);
 
             if (_lastSprite != null)
                 GameObject.Destroy(_lastSprite);

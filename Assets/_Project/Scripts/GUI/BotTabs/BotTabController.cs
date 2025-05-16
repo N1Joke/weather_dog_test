@@ -1,4 +1,6 @@
-﻿using Core;
+﻿using AppConstants;
+using Core;
+using Tools.Extensions;
 
 namespace Assets._Project.Scripts.GUI.BotTabs
 {
@@ -7,15 +9,19 @@ namespace Assets._Project.Scripts.GUI.BotTabs
         public struct Ctx
         {
             public BotTabsView view;
+            public BotTabsModel model;
         }
 
         private readonly Ctx _ctx;
-        private readonly BotTabsModel _model;
 
         public BotTabController(Ctx ctx)
         {
             _ctx = ctx;
-            _model = new();
+
+            _ctx.view.DogTabBtn.onClick.AddListener(() => _ctx.model.ChangeTab(Constants.DogTag));
+            _ctx.view.WeatherTabBtn.onClick.AddListener(() => _ctx.model.ChangeTab(Constants.WeatherTag));
+
+            _ctx.model.ChangeTab(Constants.WeatherTag);
         }
     }
 }

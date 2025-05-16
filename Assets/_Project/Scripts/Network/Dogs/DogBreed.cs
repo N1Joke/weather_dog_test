@@ -3,10 +3,12 @@
     [System.Serializable]
     public class DogBreed
     {
-        public string Name;
+        public string Id { get; }
+        public string Name { get; }
 
-        public DogBreed(string name)
+        public DogBreed(string id, string name)
         {
+            Id = id;
             Name = name;
         }
     }
