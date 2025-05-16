@@ -76,3 +76,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _guiViewPrefab: {fileID: 5351081661358760592, guid: 8ddbfef047f562840939cda067d242d8, type: 3}
   _breedItemViewPrefab: {fileID: 2025756719460270457, guid: 3a427e3fcaf41df40a004e16810dee01, type: 3}
+  _gameSettings: {fileID: 11400000, guid: 6228765b21eb3e340b0dede5396ec63a, type: 2}

@@ -6,9 +6,9 @@ using Assets._Project.Scripts.Network;
 using Assets._Project.Scripts.Network.Dogs;
 using Assets._Project.Scripts.Network.Weather;
 using GUI;
+using Presets;
 using System;
 using System.Collections.Generic;
-using Tools.Extensions;
 using UnityEngine;
 using Zenject;
 
@@ -19,17 +19,14 @@ namespace MonoInstallers
         [Header("Prefabs")]
         [SerializeField] private GUIView _guiViewPrefab;
         [SerializeField] private DogBreedItemView _breedItemViewPrefab;
-        //[SerializeField] private UnitPresetCollection _unitPresetCollection;
+        [Header("Presets")]
+        [SerializeField] private GameSettings _gameSettings;
 
         private List<IDisposable> _disposables = new List<IDisposable>();
 
         public override void InstallBindings()
         {
             DontDestroyOnLoad(this);
-
-            #region Scriptable objects
-            //Container.Bind<UnitPresetCollection>().FromScriptableObject(_unitPresetCollection).AsSingle();            
-            #endregion
 
             var guiInstance = Instantiate(_guiViewPrefab, transform);
 
@@ -48,7 +45,8 @@ namespace MonoInstallers
                 view = guiInstance.weatherScreenView,
                 queryManager = requestQueue,
                 service = new WeatherService(),
-                onScreenChange = botTabModel.OnScreenChange
+                onScreenChange = botTabModel.OnScreenChange,
+                gameSettings = _gameSettings
             });
             _disposables.Add(weatherScreenController);
 
@@ -62,7 +60,8 @@ namespace MonoInstallers
                 queryManager = requestQueue,
                 service = new DogService(),
                 onScreenChange = botTabModel.OnScreenChange,
-                itemPool = Container.Resolve<DogBreedItemPool>()
+                itemPool = Container.Resolve<DogBreedItemPool>(),
+                gameSettings = _gameSettings
             });
             _disposables.Add(dogsScreenController);
         }

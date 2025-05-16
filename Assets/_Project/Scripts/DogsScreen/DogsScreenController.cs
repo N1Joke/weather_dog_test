@@ -4,13 +4,12 @@ using Assets._Project.Scripts.GUI.DogsScreen.DigBreedItemController;
 using Assets._Project.Scripts.Network;
 using Assets._Project.Scripts.Network.Dogs;
 using Core;
+using Presets;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using Tools.Extensions;
-using UnityEditor.Search;
 using UnityEngine;
-using Zenject;
 
 namespace Assets._Project.Scripts.GUI.DogsScreen
 {
@@ -23,6 +22,7 @@ namespace Assets._Project.Scripts.GUI.DogsScreen
             public IDogService service;
             public ReactiveEvent<string> onScreenChange;
             public DogBreedItemPool itemPool;
+            internal GameSettings gameSettings;
         }
                 
         private readonly Ctx _ctx;
@@ -137,7 +137,8 @@ namespace Assets._Project.Scripts.GUI.DogsScreen
                     id = breeds[i].Id,
                     itemPool = _ctx.itemPool,
                     name = breeds[i].Name,
-                    parent = _ctx.view.contentParent
+                    parent = _ctx.view.contentParent,
+                    gameSettings = _ctx.gameSettings
                 }));
 
                 if (i == 9)
@@ -164,7 +165,7 @@ namespace Assets._Project.Scripts.GUI.DogsScreen
 
                 try
                 {
-                    var details = await _ctx.service.GetBreedInfoAsync(item.Id, linkedToken);
+                    var details = await _ctx.service.GetBreedInfoAsync(item.Id, linkedToken, _ctx.gameSettings.serverDelaySimulationBreedInfoDescription);
 
                     if (linkedToken.IsCancellationRequested)
                         return;

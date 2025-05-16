@@ -1,6 +1,7 @@
 ﻿using Assets._Project.Scripts.DogsScreen.Factory;
 using Core;
 using DG.Tweening;
+using Presets;
 using Tools.Extensions;
 using UnityEngine;
 
@@ -15,10 +16,10 @@ namespace Assets._Project.Scripts.GUI.DogsScreen.DigBreedItemController
             public DogBreedItemPool itemPool;
             public RectTransform parent;
             public string name;
+            public GameSettings gameSettings;
         }
 
         private DogBreedItemView _view;
-        private float _speed = 10;
         private readonly Ctx _ctx;
         private Tween _tween;        
         public string Id => _ctx.id;
@@ -52,7 +53,7 @@ namespace Assets._Project.Scripts.GUI.DogsScreen.DigBreedItemController
             {
                 _view.loadingRect.rotation = Quaternion.Euler(Vector3.zero);
                 _view.loadingRect.gameObject.SetActive(true);
-                _tween = _view.loadingRect.DORotate(new Vector3(0, 0, 359), _speed / 360)
+                _tween = _view.loadingRect.DORotate(new Vector3(0, 0, 359), _ctx.gameSettings.loadingImageRotationSpeed / 360)
                 .SetLoops(-1, LoopType.Incremental)
                 .SetEase(Ease.Linear)
                 .SetLink(_view.loadingRect.gameObject);

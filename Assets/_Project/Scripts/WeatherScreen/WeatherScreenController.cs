@@ -1,10 +1,9 @@
 ﻿using AppConstants;
-using Assets._Project.Scripts.DogsScreen.Factory;
 using Assets._Project.Scripts.Network;
 using Assets._Project.Scripts.Network.Weather;
 using Core;
 using Cysharp.Threading.Tasks;
-using DG.Tweening;
+using Presets;
 using System;
 using System.Text;
 using System.Threading;
@@ -21,16 +20,13 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
             public WeatherScreenView view;
             public QueryManager queryManager;
             public IWeatherService service;
-            public ReactiveEvent<string> onScreenChange;            
+            public ReactiveEvent<string> onScreenChange;
+            public GameSettings gameSettings;
         }
-        
-        private const int DelayRefresh = 5;
+
         private readonly Ctx _ctx;
-        private readonly WeatherScreenModel _model;
         private CancellationTokenSource _pollingCts;
         private CancellationTokenSource _iconCts;
-        private IDisposable _loadingDisposable;
-        private Tween _loadingTween;
         private StringBuilder _sb = new StringBuilder();
         private Sprite _lastSprite;
         private Texture2D _lastTexture;
@@ -38,7 +34,6 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
         public WeatherScreenController(Ctx ctx)
         {
             _ctx = ctx;
-            _model = new();
 
             Subscribe();
         }
@@ -92,6 +87,8 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
         {
             while (!outerToken.IsCancellationRequested)
             {
+                Debug.Log("Pull forecast");
+
                 _ctx.queryManager.Enqueue(Constants.WeatherTag, async queryToken =>
                 {
                     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(queryToken, outerToken);
@@ -119,7 +116,7 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
 
                 try
                 {
-                    await UniTask.Delay(TimeSpan.FromSeconds(DelayRefresh), cancellationToken: outerToken);
+                    await UniTask.Delay(TimeSpan.FromSeconds(_ctx.gameSettings.weatherRefreshTimer), cancellationToken: outerToken);
                 }
                 catch (OperationCanceledException)
                 {
@@ -132,16 +129,11 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
         private void ShowLoading()
         {
             //to do
-            //_loadingTween = rectTransform
-            //.DORotate(new Vector3(0, 0, -360), rotationSpeed / 360f)                          
-            //.SetLoops(-1, LoopType.Incremental) 
-            //.SetEase(Ease.Linear).AddTo(this);
         }
 
         private void HideLoading()
         {
-            if (_loadingTween.IsActive())
-                _loadingTween.Kill();
+            //to do
         }
 
         private void ShowForecast(WeatherForecast forecast)
@@ -158,12 +150,6 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
 
         private async UniTaskVoid LoadIcon(string url, CancellationToken ct)
         {
-            if (_lastSprite != null)
-            {
-                GameObject.Destroy(_lastSprite);
-                GameObject.Destroy(_lastTexture);
-            }
-
             try
             {
                 using var www = UnityWebRequestTexture.GetTexture(url);
@@ -173,6 +159,12 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
                 {
                     Debug.LogWarning($"Icon load failed: {www.error}");
                     return;
+                }
+
+                if (_lastSprite != null)
+                {
+                    GameObject.Destroy(_lastSprite);
+                    GameObject.Destroy(_lastTexture);
                 }
 
                 var texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
@@ -207,6 +199,8 @@ namespace Assets._Project.Scripts.GUI.WeatherScreen
                 GameObject.Destroy(_lastSprite);
             if (_lastTexture != null)
                 GameObject.Destroy(_lastTexture);
+
+            _ctx.service.ClearCache();
 
             base.OnDispose();
         }

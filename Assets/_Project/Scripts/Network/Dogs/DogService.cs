@@ -11,13 +11,12 @@ namespace Assets._Project.Scripts.Network.Dogs
 {
     public class DogService : IDogService
     {
-        private const string Url = "https://dogapi.dog/api/v2/breeds";
+        private const string UrlDogList = "https://dogapi.dog/api/v2/breeds";
+        private const string UrlDogInfoFormat = "https://dogapi.dog/api/v2/breeds/{0}";
 
         public async UniTask<List<DogBreed>> GetBreedsAsync(CancellationToken ct)
         {
-            //await UniTask.Delay(TimeSpan.FromSeconds(2), cancellationToken: ct);
-
-            using var request = UnityWebRequest.Get(Url);
+            using var request = UnityWebRequest.Get(UrlDogList);
             var operation = await request.SendWebRequest().WithCancellation(ct);
 
             if (request.result != UnityWebRequest.Result.Success)
@@ -31,13 +30,11 @@ namespace Assets._Project.Scripts.Network.Dogs
             ).ToList();
         }
 
-        public async UniTask<DogBreedDetails> GetBreedInfoAsync(string id, CancellationToken ct)
+        public async UniTask<DogBreedDetails> GetBreedInfoAsync(string id, CancellationToken ct, float delay)
         {
-            await UniTask.Delay(TimeSpan.FromSeconds(2), cancellationToken: ct);
+            await UniTask.Delay(TimeSpan.FromSeconds(delay), cancellationToken: ct);
 
-            string url = $"https://dogapi.dog/api/v2/breeds/{id}";
-
-            using var request = UnityWebRequest.Get(url);
+            using var request = UnityWebRequest.Get(string.Format(UrlDogInfoFormat, id));
             await request.SendWebRequest().WithCancellation(ct);
 
             var json = request.downloadHandler.text;
